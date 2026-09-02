@@ -27,6 +27,7 @@ CREATE TABLE MealPlan
     Description NVARCHAR(200)
 );
 GO
+    
 
 CREATE TABLE Season
 (
@@ -154,8 +155,12 @@ CREATE TABLE Employee
     Salary         DECIMAL(10,2) NOT NULL
 );
 GO
-
-
+CREATE TABLE Country
+(
+    CountryID   INT IDENTITY(1,1) PRIMARY KEY,
+    CountryName NVARCHAR(100) NOT NULL UNIQUE
+);
+GO
 
 -- RESERVATION / BILLING
 
