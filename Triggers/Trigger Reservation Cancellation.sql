@@ -19,7 +19,7 @@ BEGIN
         ON i.ReservationID = d.ReservationID
 
     WHERE i.ReservationStatus = 'Cancelled'
-      AND d.ReservationStatus = 'Confirmed';
+      AND d.ReservationStatus <> 'Confirmed';
 
 END;
 GO
