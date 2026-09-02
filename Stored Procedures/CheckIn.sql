@@ -1,4 +1,11 @@
-CREATE OR ALTER PROCEDURE CheckInGuest
+USE [HotelManagement]
+GO
+/****** Object:  StoredProcedure [dbo].[CheckInGuest]    Script Date: 02/09/2026 12:35:03 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[CheckInGuest]
 (
     @ReservationID INT,
     @ActualCheckIn DATETIME2 = NULL
@@ -15,23 +22,22 @@ BEGIN
         DECLARE
             @ReservationStatus NVARCHAR(30),
             @RoomID INT,
-            @OccupiedStatusID INT;
-
+            @ScheduledCheckIn DATETIME2;
 
         -- If no actual check-in date is supplied,
         -- use the current date/time
         IF @ActualCheckIn IS NULL
             SET @ActualCheckIn = SYSDATETIME();
 
-
-        -- Reservation exists?
+        -- Get reservation information
         SELECT
             @ReservationStatus = ReservationStatus,
-            @RoomID = RoomID
-        FROM Reservation
+            @RoomID = RoomID,
+            @ScheduledCheckIn = CheckIn
+        FROM dbo.Reservation
         WHERE ReservationID = @ReservationID;
 
-
+        -- Reservation exists?
         IF @ReservationStatus IS NULL
         BEGIN
             RAISERROR(
@@ -43,7 +49,6 @@ BEGIN
             ROLLBACK TRANSACTION;
             RETURN;
         END;
-
 
         -- Reservation must be confirmed
         IF @ReservationStatus <> 'Confirmed'
@@ -58,13 +63,8 @@ BEGIN
             RETURN;
         END;
 
-
         -- Actual check-in cannot be before scheduled check-in
-        IF @ActualCheckIn < (
-            SELECT CheckIn
-            FROM Reservation
-            WHERE ReservationID = @ReservationID
-        )
+        IF @ActualCheckIn < @ScheduledCheckIn
         BEGIN
             RAISERROR(
                 'Actual check-in cannot be before the scheduled check-in date.',
@@ -76,41 +76,12 @@ BEGIN
             RETURN;
         END;
 
-
-        -- Get Occupied status
-        SELECT
-            @OccupiedStatusID = RoomStatusID
-        FROM RoomStatus
-        WHERE StatusName = 'Occupied';
-
-
-        IF @OccupiedStatusID IS NULL
-        BEGIN
-            RAISERROR(
-                'Room status Occupied does not exist.',
-                16,
-                1
-            );
-
-            ROLLBACK TRANSACTION;
-            RETURN;
-        END;
-
-
         -- Update Reservation
-        UPDATE Reservation
+        UPDATE dbo.Reservation
         SET
             ActualCheckIn = @ActualCheckIn,
             ReservationStatus = 'Checked In'
         WHERE ReservationID = @ReservationID;
-
-
-        -- Update Room
-        UPDATE Room
-        SET
-            RoomStatusID = @OccupiedStatusID
-        WHERE RoomID = @RoomID;
-
 
         COMMIT TRANSACTION;
 
@@ -124,6 +95,4 @@ BEGIN
         THROW;
 
     END CATCH
-
 END;
-GO
